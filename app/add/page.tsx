@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { addWord } from '@/lib/storage'
 
 export default function AddWord() {
   const router = useRouter()
@@ -11,36 +11,46 @@ export default function AddWord() {
   const [example, setExample] = useState('')
   const [level, setLevel] = useState('A1')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+    const trimmedWord = word.trim()
+    const trimmedMeaning = meaning.trim()
+
+    if (!trimmedWord || !trimmedMeaning) {
+      setError('کلمه و معنی الزامی هستند.')
+      return
+    }
+
     setLoading(true)
-
-    const { error } = await supabase.from('words').insert([
-      {
-        word,
-        meaning,
-        example,
+    try {
+      addWord({
+        word: trimmedWord,
+        meaning: trimmedMeaning,
+        example: example.trim(),
         level,
-        status: 'new',
-      },
-    ])
-
-    setLoading(false)
-
-    if (error) {
-      alert('خطا در ذخیره کلمه: ' + error.message)
-    } else {
-      alert('کلمه با موفقیت اضافه شد!')
+      })
       router.push('/')
-      router.refresh()
+    } catch (err) {
+      setError('خطا در ذخیره. لطفاً دوباره تلاش کنید.')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-lg mx-auto bg-white p-8 rounded-xl shadow-sm border">
+    <div className="min-h-screen bg-gray-50 p-6 md:p-8" dir="rtl">
+      <div className="max-w-lg mx-auto bg-white p-6 md:p-8 rounded-xl shadow-sm border">
         <h1 className="text-2xl font-bold mb-6">افزودن کلمه جدید</h1>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -52,6 +62,7 @@ export default function AddWord() {
               onChange={(e) => setWord(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="مثلاً: apple"
+              dir="ltr"
             />
           </div>
 
@@ -75,6 +86,7 @@ export default function AddWord() {
               onChange={(e) => setExample(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="مثلاً: I eat an apple every day"
+              dir="ltr"
             />
           </div>
 
@@ -85,12 +97,11 @@ export default function AddWord() {
               onChange={(e) => setLevel(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="A1">A1</option>
-              <option value="A2">A2</option>
-              <option value="B1">B1</option>
-              <option value="B2">B2</option>
-              <option value="C1">C1</option>
-              <option value="C2">C2</option>
+              {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -104,6 +115,7 @@ export default function AddWord() {
         </form>
 
         <button
+          type="button"
           onClick={() => router.push('/')}
           className="mt-4 w-full text-center text-gray-500 hover:text-gray-700"
         >
